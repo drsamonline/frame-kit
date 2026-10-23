@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>frame-kit — round-trip test</title>
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--ink:#e7e9ee;--mut:#9aa3b2;--line:#252a34;--ok:#22c55e;--bad:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header,main,footer{max-width:760px;margin:0 auto;padding:20px}
+  pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1>frame-kit — round-trip test</h1>
+  <p class="mut">Pack frames, shuffle them, duplicate some, drop some, collect and verify. Runs entirely in this page.</p>
+</header>
+<main>
+  <pre id="out">Running…</pre>
+</main>
+<footer class="mut">© 2026 Dr Sohil Momin</footer>
+<script src="../frame-kit.js"></script>
+<script>
+  var out = [], pass = 0, fail = 0;
+  function ok(cond, label){ out.push((cond?'<span class="ok">PASS</span>  ':'<span class="bad">FAIL</span>  ')+label); cond?pass++:fail++; }
+  function rand(n){ var a=new Uint8Array(n); for(var i=0;i<n;i++) a[i]=(i*2654435761)%256; return a; }
+
+  /* systematic reference decoder: symbol id i carries block i */
+  function SystematicDecoder(k, blockSize, length){ this.k=k; this.blockSize=blockSize; this.length=length; this.blocks=new Array(k); this.resolved=0; }
+  SystematicDecoder.prototype.addSymbol=function(id,data){ if(id>=this.k||this.blocks[id]) return false; this.blocks[id]=data.slice(); this.resolved++; return true; };
+  SystematicDecoder.prototype.payload=function(){ var o=new Uint8Array(this.length), off=0; for(var i=0;i<this.k;i++){ var b=this.blocks[i], n=Math.min(b.length,this.length-off); o.set(b.subarray(0,n),off); off+=n; } return o; };
+  Object.defineProperty(SystematicDecoder.prototype,'complete',{get:function(){return this.resolved>=this.k;}});
+  Object.defineProperty(SystematicDecoder.prototype,'progress',{get:function(){return this.resolved/this.k;}});
+
+  var MAGIC=0xb7;
+  function run(bytes, blockSize){
+    var payload=rand(bytes), k=Frame.blockCount(payload.length,blockSize);
+    var blocks=[]; for(var i=0;i<k;i++){ var b=new Uint8Array(blockSize); b.set(payload.subarray(i*blockSize, Math.min((i+1)*blockSize,payload.length))); blocks.push(b); }
+    var checksum=Frame.crc32(payload);
+    var frames=[]; for(var id=0;id<k;id++) frames.push(Frame.pack({magic:MAGIC,transferId:1,k:k,blockSize:blockSize,totalLength:payload.length,payloadCRC:checksum,symbolId:id,data:blocks[id]}));
+    var c=new Frame.FountainCollector(SystematicDecoder);
+    for(var j=0;j<frames.length;j++){ var p=Frame.parse(frames[j],{magics:[MAGIC],label:'frame-kit'}); c.add(p); c.add(p); } // each twice
+    if(!c.complete) return false;
+    return Frame.crc32(c.assemble())===checksum;
+  }
+
+  // frame validation
+  var f=Frame.pack({magic:MAGIC,transferId:1,k:2,blockSize:32,totalLength:40,payloadCRC:1,symbolId:0,data:new Uint8Array(32)});
+  ok(Frame.parse(f,{magics:[MAGIC],label:'frame-kit'}).k===2,'a frame round-trips');
+  var bad=f.slice(); bad[6]^=0xff;
+  try{ Frame.parse(bad,{magics:[MAGIC]}); ok(false,'a corrupted header is rejected'); }catch(e){ ok(/checksum/.test(e.message),'a corrupted header is rejected'); }
+  ok(Frame.crc32(new TextEncoder().encode('123456789'))===0xcbf43926,'crc32 matches its check value');
+
+  // collector round-trips
+  [[1024,256],[20*1024,1024],[100*1024,1400]].forEach(function(c){ ok(run(c[0],c[1]), 'reassembles '+c[0]+'B at block='+c[1]+' (duplicated)'); });
+
+  document.getElementById('out').innerHTML = out.join('\n') + '\n\n<span class="mut">'+pass+' passed, '+fail+' failed</span>';
+</script>
+</body>
+</html>
