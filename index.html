@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>frame-kit — the shared transfer-frame core</title>
+<meta name="description" content="The shared self-describing transfer frame, rateless collector and byte/checksum utilities for drsamonline apps. One file, no dependencies. MIT.">
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--ink:#e7e9ee;--mut:#9aa3b2;--line:#252a34;--acc:#22c55e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header,main,footer{max-width:760px;margin:0 auto;padding:24px 20px}
+  h1{margin:0 0 6px;font-size:24px}
+  .mut{color:var(--mut)}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin:18px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 4px;font-size:14px}
+  .card p{margin:0;color:var(--mut);font-size:13px}
+  a{color:#7dd3fc}
+  .btn{display:inline-block;background:var(--acc);color:#06210f;text-decoration:none;font-weight:600;border-radius:10px;padding:10px 14px;margin:4px 4px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>frame-kit</h1>
+  <p class="mut">The shared transfer-frame core: a self-describing 22-byte header, a rateless collector, and the byte/checksum helpers underneath. One file, no dependencies. MIT.</p>
+  <p><a class="btn" href="./demo/">Run the round-trip test</a> <a class="btn" href="https://github.com/drsamonline/frame-kit">Source</a></p>
+</header>
+<main>
+  <div class="grid">
+    <div class="card"><h3>Self-describing header</h3><p>Magic, transferId, k, block size, length, a payload CRC-32 and a header CRC-16 — lock on mid-stream.</p></div>
+    <div class="card"><h3>Strict validation</h3><p>A frame is bytes from a camera. A corrupt or crafted header is dropped, not trusted.</p></div>
+    <div class="card"><h3>Rateless collector</h3><p>Any order, duplicates tolerated, restarts on a new transfer id, checksum verified on assemble.</p></div>
+    <div class="card"><h3>Byte utilities</h3><p>CRC-16/CCITT, CRC-32, a seeded PRNG, XOR/concat and size formatting.</p></div>
+  </div>
+  <p class="mut">Sits above the codec: <a href="https://drsamonline.github.io/optical-kit/">optical-kit</a> carries the fountain code; frame-kit wraps it.</p>
+</main>
+<footer class="mut">Built with frame-kit · © 2026 Dr Sohil Momin · Part of the Forge system</footer>
+</body>
+</html>
