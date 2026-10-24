@@ -1,4 +1,4 @@
-/* global module, btoa, atob */
+/* global module */
 /* frame-kit — the shared transfer-frame core for drsamonline apps.
  *
  * One file, no build step, no dependencies. It provides the *framing* layer that
