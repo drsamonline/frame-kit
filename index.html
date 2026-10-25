@@ -36,5 +36,37 @@
   <p class="mut">Sits above the codec: <a href="https://drsamonline.github.io/optical-kit/">optical-kit</a> carries the fountain code; frame-kit wraps it.</p>
 </main>
 <footer class="mut">Built with frame-kit · © 2026 Dr Sohil Momin · Part of the Forge system</footer>
+
+<script>
+/* A SMOKE TEST, not a feature test - and it says so.
+   It answers the three questions that separate a DEAD app from a WRONG one: did the page
+   come up, are the kits it needs actually loaded, and does storage work. A feature test
+   needs the feature; this needs the app to exist, which is true of every app here.
+   Open the page with ?test to see the result on screen. */
+window.__smokeTest = function () {
+  var out = [];
+  function ok(n, c) { out.push((c ? "PASS " : "FAIL ") + n); }
+  ok("the document rendered", !!document.body && document.body.children.length > 0);
+  ok("a heading is present", !!document.querySelector("h1, h2"));
+  ok("no script threw during load", !window.__bootError);
+  var kits = ["Export","Loom","CryptoKit","Case","Search","Srs","Game","Art","Audio","Ml","UI","Lan","Astro"];
+  var found = kits.filter(function (k) { return window[k]; });
+  ok("at least one kit is loaded (" + (found.join(", ") || "none") + ")", found.length > 0);
+  try {
+    localStorage.setItem("__smoke", "1");
+    ok("storage works", localStorage.getItem("__smoke") === "1");
+    localStorage.removeItem("__smoke");
+  } catch (e) { ok("storage works", false); }
+  console.log(out.join("\n"));
+  if (location.search.indexOf("test") >= 0) {
+    var d = document.createElement("pre");
+    d.textContent = out.join("\n");
+    d.style.cssText = "position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;padding:12px;font:12px ui-monospace,monospace;z-index:99999;max-height:40vh;overflow:auto;white-space:pre-wrap";
+    document.body.appendChild(d);
+  }
+  return out;
+};
+window.addEventListener("error", function () { window.__bootError = true; });
+</script>
 </body>
 </html>
