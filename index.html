@@ -68,5 +68,53 @@ window.__smokeTest = function () {
 };
 window.addEventListener("error", function () { window.__bootError = true; });
 </script>
+
+<script>
+/* TAKE YOUR DATA WITH YOU.
+   Every app here stores everything on your device, and most had no way to get it out - which
+   makes "your data stays yours" a claim you cannot act on. This exports the RAW STORE as JSON:
+   it is a BACKUP, not a report. A formatted CSV needs the app's own model, and this is the
+   honest thing that can be the same in every app.
+   Press the button, or open the page with ?export. */
+window.__exportAll = function () {
+  var out = { app: document.title, exported: new Date().toISOString(), storage: {} };
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("__") !== 0) out.storage[k] = localStorage.getItem(k);
+    }
+  } catch (e) { out.storageError = String(e); }
+  var name = (document.title || "app").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+             + "-data-" + new Date().toISOString().slice(0, 10) + ".json";
+  var json = JSON.stringify(out, null, 2);
+  if (window.Export && typeof Export.save === "function") {
+    Export.save(name, json, "application/json");
+  } else {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  return name;
+};
+(function () {
+  if (location.search.indexOf("export") >= 0) { setTimeout(window.__exportAll, 300); return; }
+  function add() {
+    if (!document.body || document.getElementById("__exportLink")) return;
+    var b = document.createElement("button");
+    b.id = "__exportLink";
+    b.textContent = "Save my data";
+    b.title = "Download everything this app has stored, as JSON";
+    b.style.cssText = "position:fixed;left:10px;bottom:10px;z-index:9998;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:6px 10px;font:12px system-ui;cursor:pointer;opacity:.75";
+    b.onmouseenter = function () { b.style.opacity = "1"; };
+    b.onmouseleave = function () { b.style.opacity = ".75"; };
+    b.onclick = window.__exportAll;
+    document.body.appendChild(b);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
+  else add();
+})();
+</script>
 </body>
 </html>
