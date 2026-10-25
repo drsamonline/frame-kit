@@ -1,7 +1,7 @@
 # frame-kit
 
 [![live](https://img.shields.io/badge/live-online-22c55e)](https://drsamonline.github.io/frame-kit/)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![license](https://img.shields.io/badge/license-PolyForm Noncommercial-blue)](LICENSE)
 
 
 **The shared transfer-frame core for drsamonline apps.** One file, no build step,
