@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>frame-kit — the shared transfer-frame core</title>
+<meta name="description" content="The shared self-describing transfer frame, rateless collector and byte/checksum utilities for drsamonline apps. One file, no dependencies. MIT.">
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--ink:#e7e9ee;--mut:#9aa3b2;--line:#252a34;--acc:#22c55e}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header,main,footer{max-width:760px;margin:0 auto;padding:24px 20px}
+  h1{margin:0 0 6px;font-size:24px}
+  .mut{color:var(--mut)}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin:18px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 4px;font-size:14px}
+  .card p{margin:0;color:var(--mut);font-size:13px}
+  a{color:#7dd3fc}
+  .btn{display:inline-block;background:var(--acc);color:#06210f;text-decoration:none;font-weight:600;border-radius:10px;padding:10px 14px;margin:4px 4px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>frame-kit</h1>
+  <p class="mut">The shared transfer-frame core: a self-describing 22-byte header, a rateless collector, and the byte/checksum helpers underneath. One file, no dependencies. MIT.</p>
+<figure style="margin:26px 0 0;text-align:center">
+  <img src="assets/concept.svg" alt="A diagram of what this kit does"
+       style="width:100%;max-width:320px;height:auto">
+</figure>
+
+  <p><a class="btn" href="./demo/">Run the round-trip test</a> <a class="btn" href="https://github.com/drsamonline/frame-kit">Source</a></p>
+</header>
+<main>
+  <div class="grid">
+    <div class="card"><h3>Self-describing header</h3><p>Magic, transferId, k, block size, length, a payload CRC-32 and a header CRC-16 — lock on mid-stream.</p></div>
+    <div class="card"><h3>Strict validation</h3><p>A frame is bytes from a camera. A corrupt or crafted header is dropped, not trusted.</p></div>
+    <div class="card"><h3>Rateless collector</h3><p>Any order, duplicates tolerated, restarts on a new transfer id, checksum verified on assemble.</p></div>
+    <div class="card"><h3>Byte utilities</h3><p>CRC-16/CCITT, CRC-32, a seeded PRNG, XOR/concat and size formatting.</p></div>
+  </div>
+  <p class="mut">Sits above the codec: <a href="https://drsamonline.github.io/optical-kit/">optical-kit</a> carries the fountain code; frame-kit wraps it.</p>
+</main>
+
+
+
+<footer class="mut">Built with frame-kit · © 2026 Dr Sohil Momin · Part of the Forge system<!-- support:block:start -->
+<style>
+  /* Scoped to .support. Uses the host page's variables when they exist. */
+  .support{--s-ink:var(--ink,#14110e);--s-paper:var(--paper,#f7f2e9);--s-card:var(--paper-2,#fffdf8);
+           --s-muted:var(--muted,#6b6157);--s-line:var(--line,#e2d8c8);--s-accent:var(--accent,#2f6f8f);
+           font-family:var(--sans,ui-sans-serif,-apple-system,"Segoe UI",sans-serif);
+           color:var(--s-ink);padding:2.6rem 0 1rem;border-top:1px solid var(--s-line)}
+  .support-head{display:flex;gap:1rem;align-items:flex-start;margin:0 0 1.4rem}
+  .support-portrait{width:72px;height:72px;flex:0 0 72px;border-radius:50%;object-fit:cover;
+                    border:1px solid var(--s-line);background:var(--s-card)}
+  .support h2{font-size:1.15rem;letter-spacing:.08em;text-transform:uppercase;margin:0 0 .5rem;color:var(--s-muted)}
+  .support .support-lede{margin:0;max-width:44rem;color:var(--s-muted);font-size:.95rem}
+  .support-grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));align-items:stretch}
+  .support-card{background:var(--s-card);border:1px solid var(--s-line);border-radius:.7rem;padding:.9rem 1rem;
+                display:flex;flex-direction:column;gap:.35rem}
+  .support-card h3{margin:0;font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--s-muted);font-weight:600}
+  .support-card p{margin:0;font-size:.92rem;line-height:1.5}
+  .support-card a{color:var(--s-accent);text-decoration:none;border-bottom:1px solid transparent;word-break:break-word}
+  .support-card a:hover,.support-card a:focus-visible{border-bottom-color:currentColor}
+  .support-id{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .support-id code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.95rem;
+                   background:transparent;border:1px dashed var(--s-line);border-radius:.35rem;padding:.15rem .45rem}
+  .support-copy{font:inherit;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;
+                background:transparent;color:var(--s-muted);border:1px solid var(--s-line);
+                border-radius:.35rem;padding:.2rem .5rem;cursor:pointer}
+  .support-copy:hover,.support-copy:focus-visible{color:var(--s-ink);border-color:var(--s-ink)}
+  .support-card.upi{grid-row:span 1}
+  .support-qr{display:flex;gap:.9rem;align-items:center;flex-wrap:wrap;margin-top:.2rem}
+  /* the white tile is load-bearing: a dark-mode QR does not scan */
+  .support-qr img{width:132px;height:132px;display:block;background:#fff;padding:.35rem;
+                  border:1px solid var(--s-line);border-radius:.4rem;image-rendering:pixelated}
+  .support-qr small{display:block;color:var(--s-muted);font-size:.8rem;max-width:11rem;line-height:1.4}
+  .support-foot{margin:1.2rem 0 0;font-size:.8rem;color:var(--s-muted)}
+  @media (prefers-reduced-motion:no-preference){.support-card{transition:border-color .15s ease}}
+  .support-card:target,.support-card:focus-within{border-color:var(--s-accent)}
+
+  /* ---------- light theme ----------
+     Added so the page reads on paper. It overrides the page's own variables and
+     nothing else — no markup, no layout, no type. */
+  :root, html {
+    color-scheme: light;
+    --bg: #f7f6f2;
+    --card: #ffffff;
+    --ink: #14161a;
+    --mut: #5c6470;
+    --line: #e2ddd2;
+    --acc: #178840;
+  }
+</style>
+
+<section class="support" id="support" aria-labelledby="support-h" data-support>
+  <div class="support-head">
+    <img class="support-portrait" src="assets/support-portrait.jpg" width="72" height="72"
+         alt="Dr. Sohil Momin" loading="lazy" decoding="async">
+    <div>
+      <h2 id="support-h">Support this work</h2>
+      <p class="support-lede">Everything here is free, offline and accountless. If it earned its keep,
+        there are a few ways to say so — pick whichever is easiest where you are.</p>
+    </div>
+  </div>
+  <div class="support-grid">
+
+    <div class="support-card upi">
+      <h3>UPI · India</h3>
+      <div class="support-id">
+        <code id="upi-vpa">drsohilboi@ybl</code>
+        <button class="support-copy" type="button" data-copy="drsohilboi@ybl"
+                aria-label="Copy the UPI ID drsohilboi@ybl">Copy</button>
+      </div>
+      <p><a href="upi://pay?pa=drsohilboi%40ybl&amp;pn=Dr.%20Sohil%20Momin&amp;cu=INR">Open in a UPI app →</a></p>
+      <div class="support-qr">
+        <img src="assets/upi-qr.svg" width="132" height="132"
+             alt="QR code for the UPI ID drsohilboi@ybl, payee Dr. Sohil Momin">
+        <small>Scan with any UPI app. Payee: Dr. Sohil Momin.</small>
+      </div>
+    </div>
+
+    <div class="support-card">
+      <h3>Ko-fi</h3>
+      <p>One-off tip, no account needed.<br>
+        <a href="https://ko-fi.com/matneo" target="_blank" rel="noopener noreferrer">ko-fi.com/matneo →</a></p>
+    </div>
+
+    <div class="support-card">
+      <h3>PayPal</h3>
+      <p>For outside India, or a card instead of UPI.<br>
+        <a href="https://paypal.me/drsohilmomin?locale.x=en_GB&amp;country.x=IN"
+           target="_blank" rel="noopener noreferrer">paypal.me/drsohilmomin →</a></p>
+    </div>
+
+    <div class="support-card">
+      <h3>My books</h3>
+      <p>The Amazon author store — every title, one shelf.<br>
+        <a href="https://www.amazon.com/stores/author/B08ZT331LY/allbooks?ccs_id=aed72b9f-71d9-41dc-adee-e9368a317acc"
+           target="_blank" rel="noopener noreferrer">Amazon bookstore →</a></p>
+    </div>
+
+    <div class="support-card">
+      <h3>More apps</h3>
+      <p>The rest of the estate, all of it offline-first.<br>
+        <a href="https://drsamonline.github.io/" target="_blank" rel="noopener noreferrer">drsamonline.github.io →</a></p>
+    </div>
+
+    <div class="support-card">
+      <h3>Say hello</h3>
+      <p>Bugs, corrections, requests.<br>
+        <a href="mailto:sohilmomin2000@gmail.com">sohilmomin2000@gmail.com →</a></p>
+    </div>
+
+  </div>
+  <p class="support-foot">No accounts, no tracking, nothing on this page loads from the network.
+    A thank-you is a thank-you; nothing is gated behind it.</p>
+</section>
+
+<script>
+  /* Copy buttons degrade to "select the text yourself" — never a dead button. */
+  (function () {
+    document.querySelectorAll('.support [data-copy]').forEach(function (btn) {
+      if (btn.dataset.copyWired) return;
+      btn.dataset.copyWired = '1';
+      btn.addEventListener('click', function () {
+        var value = btn.getAttribute('data-copy');
+        var label = btn.textContent;
+        function done() {
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = label; }, 1500);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(value).then(done, function () {});
+          return;
+        }
+        var t = document.createElement('textarea');
+        t.value = value; t.setAttribute('readonly', ''); t.style.position = 'absolute';
+        t.style.left = '-9999px'; document.body.appendChild(t); t.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        t.remove();
+      });
+    });
+  })();
+</script>
+<!-- support:block:end -->
+</footer>
+
+<script>
+/* A SMOKE TEST, not a feature test - and it says so.
+   It answers the three questions that separate a DEAD app from a WRONG one: did the page
+   come up, are the kits it needs actually loaded, and does storage work. A feature test
+   needs the feature; this needs the app to exist, which is true of every app here.
+   Open the page with ?test to see the result on screen. */
+window.__smokeTest = function () {
+  var out = [];
+  function ok(n, c) { out.push((c ? "PASS " : "FAIL ") + n); }
+  ok("the document rendered", !!document.body && document.body.children.length > 0);
+  ok("a heading is present", !!document.querySelector("h1, h2"));
+  ok("no script threw during load", !window.__bootError);
+  var kits = ["Export","Loom","CryptoKit","Case","Search","Srs","Game","Art","Audio","Ml","UI","Lan","Astro"];
+  var found = kits.filter(function (k) { return window[k]; });
+  ok("at least one kit is loaded (" + (found.join(", ") || "none") + ")", found.length > 0);
+  try {
+    localStorage.setItem("__smoke", "1");
+    ok("storage works", localStorage.getItem("__smoke") === "1");
+    localStorage.removeItem("__smoke");
+  } catch (e) { ok("storage works", false); }
+  console.log(out.join("\n"));
+  if (location.search.indexOf("test") >= 0) {
+    var d = document.createElement("pre");
+    d.textContent = out.join("\n");
+    d.style.cssText = "position:fixed;left:0;right:0;bottom:0;background:#111;color:#eee;padding:12px;font:12px ui-monospace,monospace;z-index:99999;max-height:40vh;overflow:auto;white-space:pre-wrap";
+    document.body.appendChild(d);
+  }
+  return out;
+};
+window.addEventListener("error", function () { window.__bootError = true; });
+</script>
+
+<script>
+/* TAKE YOUR DATA WITH YOU.
+   Every app here stores everything on your device, and most had no way to get it out - which
+   makes "your data stays yours" a claim you cannot act on. This exports the RAW STORE as JSON:
+   it is a BACKUP, not a report. A formatted CSV needs the app's own model, and this is the
+   honest thing that can be the same in every app.
+   Press the button, or open the page with ?export. */
+window.__exportAll = function () {
+  var out = { app: document.title, exported: new Date().toISOString(), storage: {} };
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("__") !== 0) out.storage[k] = localStorage.getItem(k);
+    }
+  } catch (e) { out.storageError = String(e); }
+  var name = (document.title || "app").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+             + "-data-" + new Date().toISOString().slice(0, 10) + ".json";
+  var json = JSON.stringify(out, null, 2);
+  if (window.Export && typeof Export.save === "function") {
+    Export.save(name, json, "application/json");
+  } else {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  return name;
+};
+(function () {
+  if (location.search.indexOf("export") >= 0) { setTimeout(window.__exportAll, 300); return; }
+  function add() {
+    if (!document.body || document.getElementById("__exportLink")) return;
+    var b = document.createElement("button");
+    b.id = "__exportLink";
+    b.textContent = "Save my data";
+    b.title = "Download everything this app has stored, as JSON";
+    b.style.cssText = "position:fixed;left:10px;bottom:10px;z-index:9998;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:6px 10px;font:12px system-ui;cursor:pointer;opacity:.75";
+    b.onmouseenter = function () { b.style.opacity = "1"; };
+    b.onmouseleave = function () { b.style.opacity = ".75"; };
+    b.onclick = window.__exportAll;
+    document.body.appendChild(b);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
+  else add();
+})();
+</script>
+</body>
+</html>
