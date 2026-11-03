@@ -252,15 +252,10 @@ window.__exportAll = function () {
   if (location.search.indexOf("export") >= 0) { setTimeout(window.__exportAll, 300); return; }
   function add() {
     if (!document.body || document.getElementById("__exportLink")) return;
-    var b = document.createElement("button");
-    b.id = "__exportLink";
-    b.textContent = "Save my data";
-    b.title = "Download everything this app has stored, as JSON";
-    b.style.cssText = "position:fixed;left:10px;bottom:10px;z-index:9998;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:6px 10px;font:12px system-ui;cursor:pointer;opacity:.75";
-    b.onmouseenter = function () { b.style.opacity = "1"; };
-    b.onmouseleave = function () { b.style.opacity = ".75"; };
-    b.onclick = window.__exportAll;
-    document.body.appendChild(b);
+    /* The floating button was removed: it sat over the content and covered
+       what you were reading. The function below is untouched — Ctrl+Z still
+       undoes, and ?export still exports. */
+    return;
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
   else add();
