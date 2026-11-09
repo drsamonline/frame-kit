@@ -93,6 +93,6 @@ Nothing is gated behind it: no accounts, no tracking, no network requests.
 
 ## Licence
 
-MIT. (c) 2026 Dr Sohil Momin.
+PolyForm Noncommercial 1.0.0. (c) 2026 Dr Sohil Momin.
 
 Part of the Forge system. Kits are open; the orchestrator is licensed.
