@@ -4,6 +4,8 @@
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 
 
+
+![Screenshot](docs/shot.png)
 **The shared transfer-frame core for drsamonline apps.** One file, no build step,
 no dependencies.
 
