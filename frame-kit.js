@@ -18,7 +18,7 @@
  */
 (function (root) {
   "use strict";
-  var Frame = { version: "0.1.0" };
+  var Frame = { version: "2.0.0" };
 
   /* ---------- CRC-16/CCITT-FALSE ---------- */
   Frame.crc16 = function (bytes) {
@@ -221,23 +221,8 @@
    * `{ k, blockSize, length, complete, progress, addSymbol(id, data), payload() }`.
    * Omit the argument to use `optical-kit`'s decoder if it is loaded.
    * ===================================================================== */
-  Frame.defaultDecoder = function (k, blockSize, length) {
-    var O = root.Optical;
-    if (!O || typeof O.Decoder !== "function") {
-      throw new Error("FountainCollector needs a decoder: pass one, or load optical-kit.js first");
-    }
-    var d = O.Decoder(k, blockSize, 1);
-    return {
-      k: k, blockSize: blockSize, length: length,
-      get complete() { return d.progress() >= 1; },
-      get progress() { return d.progress(); },
-      get resolved() { return 0; },
-      addSymbol: function (id, data) { d.add(id, data); return true; },
-      payload: function () {
-        if (d.progress() < 1) throw new Error("transfer incomplete");
-        return d.result(length);
-      }
-    };
+  Frame.defaultDecoder = function (k, blockSize, transferId) {
+    return Frame.Decoder(k, blockSize, transferId);
   };
 
   Frame.FountainCollector = class FountainCollector {
@@ -278,7 +263,8 @@
       ) {
         this.magic = magic;
         this.transferId = frame.transferId;
-        this.decoder = new this.Decoder(frame.k, frame.blockSize, frame.totalLength);
+        this.decoder = new this.Decoder(frame.k, frame.blockSize, frame.transferId);
+        if ("length" in this.decoder) this.decoder.length = frame.totalLength;
         this.checksum = frame.payloadCRC;
         this.symbols = 0;
         this.decoder.addSymbol(frame.symbolId, frame.data);
@@ -299,6 +285,220 @@
       }
       return out;
     }
+  };
+
+
+  /* =====================================================================
+   * The fountain, which used to live in a second repository.
+   *
+   * `optical-kit` carried the encoder and a decoder of its own, with a second
+   * 17-byte frame header beside this one. Both were used by the same three apps,
+   * and both described "self-describing frames" — two definitions of the same
+   * thing, drifting apart. They are one file now: this header, one CRC, one
+   * decoder, and the encoder that was missing from here.
+   * ===================================================================== */
+
+  /** The indices XORed into symbol `seq`: the systematic prefix, then LT degrees. */
+  Frame.symbolIndices = function (transferId, seq, k) {
+    if (seq < k) return [seq];
+    var rand = Frame.createPRNG(((transferId * 2654435761) ^ (seq * 40503)) >>> 0);
+    var d = Frame.sampleDegree(rand, Frame.solitonCDF(k));
+    var set = [], guard = 0;
+    while (set.length < d && guard < 10000) {
+      var idx = Math.floor(rand() * k);
+      if (set.indexOf(idx) === -1) set.push(idx);
+      guard++;
+    }
+    return set.length ? set : [0];
+  };
+
+  var _cdfCache = {};
+
+  /** The robust-soliton degree distribution. */
+  Frame.solitonCDF = function (k) {
+    if (_cdfCache[k]) return _cdfCache[k];
+    var c = 0.1, delta = 0.05;
+    var R = c * Math.log(k / delta) * Math.sqrt(k);
+    if (R < 0.01) R = 0.01;
+    var kR = Math.floor(k / R);
+    if (kR < 1) kR = 1;
+    if (kR > k) kR = k;
+    var rho = new Array(k + 1), tau = new Array(k + 1), Z = 0, i;
+    for (i = 1; i <= k; i++) { rho[i] = (i === 1) ? 1 / k : 1 / (i * (i - 1)); tau[i] = 0; }
+    for (i = 1; i < kR; i++) tau[i] = R / (i * k);
+    tau[kR] += (R * Math.log(R / delta)) / k;
+    var cdf = new Array(k + 1), acc = 0;
+    for (i = 1; i <= k; i++) Z += rho[i] + tau[i];
+    for (i = 1; i <= k; i++) { acc += (rho[i] + tau[i]) / Z; cdf[i] = acc; }
+    cdf[k] = 1;
+    _cdfCache[k] = cdf;
+    return cdf;
+  };
+
+  Frame.sampleDegree = function (rand, cdf) {
+    var r = rand(), lo = 1, hi = cdf.length - 1;
+    while (lo < hi) {
+      var mid = (lo + hi) >> 1;
+      if (cdf[mid] < r) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  };
+
+  /** Split a payload into blocks and return the encoder state. */
+  Frame.Fountain = {
+    encode: function (data, opts) {
+      opts = opts || {};
+      var blockSize = opts.blockSize || 1400;
+      var blocks = [], n = data.length, i;
+      for (i = 0; i < n; i += blockSize) {
+        var b = new Uint8Array(blockSize);
+        b.set(data.subarray(i, Math.min(i + blockSize, n)));
+        blocks.push(b);
+      }
+      if (!blocks.length) blocks.push(new Uint8Array(blockSize));
+      return {
+        k: blocks.length,
+        blockSize: blockSize,
+        blocks: blocks,
+        transferId: opts.transferId == null
+          ? (1 + Math.floor(Math.random() * 65535))
+          : (opts.transferId & 0xffff),
+        totalLength: n,
+        payloadCRC: Frame.crc32(data)
+      };
+    },
+
+    /** The symbol bytes for one symbol id: the XOR of its source blocks. */
+    symbol: function (e, seq) {
+      var idx = Frame.symbolIndices(e.transferId, seq, e.k);
+      var out = new Uint8Array(e.blockSize);
+      for (var i = 0; i < idx.length; i++) {
+        var b = e.blocks[idx[i]];
+        for (var j = 0; j < out.length; j++) out[j] ^= b[j];
+      }
+      return out;
+    }
+  };
+
+  /**
+   * The peeling decoder.
+   *
+   * Contract, because `FountainCollector` builds one: `new Frame.Decoder(k, blockSize,
+   * transferId)`, then `addSymbol(id, data)`, and read `k`, `blockSize`, `length`,
+   * `complete`, `progress`, `resolved`, `payload()`.
+   */
+  Frame.Decoder = function (k, blockSize, transferId) {
+    var solved = new Array(k), pending = [], seen = {};
+    for (var s = 0; s < k; s++) solved[s] = null;
+
+    function peel() {
+      var progress = true;
+      while (progress) {
+        progress = false;
+        for (var i = pending.length - 1; i >= 0; i--) {
+          var p = pending[i], unknown = [], j;
+          for (j = 0; j < p.indices.length; j++) {
+            if (!solved[p.indices[j]]) unknown.push(p.indices[j]);
+          }
+          if (unknown.length === 0) { pending.splice(i, 1); continue; }
+          if (unknown.length === 1) {
+            var idx = unknown[0];
+            solved[idx] = p.data.slice();
+            pending.splice(i, 1);
+            for (var q = 0; q < pending.length; q++) {
+              var pos = pending[q].indices.indexOf(idx);
+              if (pos !== -1) {
+                var d = pending[q].data;
+                for (var m = 0; m < d.length; m++) d[m] ^= solved[idx][m];
+                pending[q].indices.splice(pos, 1);
+              }
+            }
+            progress = true;
+          }
+        }
+      }
+    }
+
+    function resolved() {
+      var c = 0;
+      for (var i = 0; i < k; i++) if (solved[i]) c++;
+      return c;
+    }
+
+    return {
+      k: k,
+      blockSize: blockSize,
+      transferId: transferId,
+      length: 0,
+      get complete() { return resolved() === k; },
+      get progress() { return resolved() / k; },
+      get resolved() { return resolved(); },
+
+      addSymbol: function (id, data) {
+        if (seen[id]) return false;
+        seen[id] = 1;
+        var idx = Frame.symbolIndices(transferId, id, k), out = data.slice(), i;
+        for (i = 0; i < idx.length; i++) {
+          if (solved[idx[i]]) for (var j = 0; j < out.length; j++) out[j] ^= solved[idx[i]][j];
+        }
+        var unknown = [];
+        for (i = 0; i < idx.length; i++) if (!solved[idx[i]]) unknown.push(idx[i]);
+        if (!unknown.length) return false;
+        pending.push({ indices: unknown, data: out });
+        peel();
+        return true;
+      },
+
+      payload: function () {
+        if (resolved() !== k) throw new Error("transfer incomplete");
+        var all = new Uint8Array(k * blockSize);
+        for (var i = 0; i < k; i++) all.set(solved[i], i * blockSize);
+        return this.length ? all.subarray(0, this.length) : all;
+      }
+    };
+  };
+
+  /** Send a payload as frames. `next()` returns frame bytes. */
+  Frame.Sender = function (data, opts) {
+    var e = Frame.Fountain.encode(data, opts || {});
+    var seq = 0;
+    return {
+      k: e.k,
+      blockSize: e.blockSize,
+      transferId: e.transferId,
+      totalLength: e.totalLength,
+      payloadCRC: e.payloadCRC,
+      next: function () {
+        var symbol = Frame.Fountain.symbol(e, seq);
+        var bytes = Frame.pack({
+          magic: (opts && opts.magic),
+          transferId: e.transferId,
+          k: e.k,
+          blockSize: e.blockSize,
+          totalLength: e.totalLength,
+          payloadCRC: e.payloadCRC,
+          symbolId: seq,
+          data: symbol
+        });
+        seq++;
+        return bytes;
+      }
+    };
+  };
+
+  /** Collect frames back into a payload, with the checksum checked. */
+  Frame.Receiver = function (opts) {
+    var c = new Frame.FountainCollector();
+    return {
+      add: function (bytes) {
+        var f = Frame.parse(bytes, opts || {});
+        return c.add(f);
+      },
+      get complete() { return c.complete; },
+      get progress() { return c.progress; },
+      get received() { return c.received; },
+      payload: function () { return c.assemble(); }
+    };
   };
 
   root.Frame = Frame;

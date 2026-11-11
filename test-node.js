@@ -157,4 +157,88 @@ ok(Frame.crc16(new TextEncoder().encode("123456789")) === 0x29b1, "crc16/CCITT m
 })();
 
 console.log("\n" + pass + " passed, " + fail + " failed");
-process.exit(fail ? 1 : 0);
+
+/* =====================================================================
+ * The fountain, merged in from optical-kit on 2026-11-12.
+ *
+ * These are optical-kit's own cases, run against this kit's frame format: the
+ * point of the merge is that the fountain and the frame agree, so the test that
+ * matters is a payload surviving dropped frames through Frame.Sender/Receiver.
+ * ===================================================================== */
+
+function randBytes(n) {
+  const a = new Uint8Array(n);
+  for (let i = 0; i < n; i++) a[i] = (i * 2654435761) % 256;
+  return a;
+}
+
+function roundTrip(bytes, blockSize, loss) {
+  const data = randBytes(bytes);
+  const tx = Frame.Sender(data, { blockSize: blockSize, transferId: 1234 });
+  const rx = Frame.Receiver();
+  let sent = 0, accepted = 0;
+  while (!rx.complete && sent < tx.k * 8) {
+    const frame = tx.next();
+    sent++;
+    if (loss && Math.random() < loss) continue;
+    const r = rx.add(frame);
+    if (r && r.fresh) accepted++;
+  }
+  if (!rx.complete) return { ok: false, reason: "incomplete", sent, k: tx.k };
+  const out = rx.payload();
+  let same = out.length === data.length;
+  for (let i = 0; same && i < data.length; i++) if (out[i] !== data[i]) same = false;
+  return { ok: same, sent, accepted, k: tx.k, overhead: (accepted / tx.k).toFixed(2) };
+}
+
+const fountainCases = [
+  [1024, 1400, 0], [50 * 1024, 1400, 0], [50 * 1024, 1400, 0.10],
+  [50 * 1024, 1400, 0.30], [200 * 1024, 2000, 0.10], [512 * 1024, 2000, 0.20],
+  [10 * 1024, 800, 0.15],
+];
+let fpass = 0, ffail = 0;
+for (const [bytes, bs, loss] of fountainCases) {
+  const r = roundTrip(bytes, bs, loss);
+  const label = `${bytes}B block=${bs} loss=${Math.round(loss * 100)}%`;
+  if (r.ok) { fpass++; console.log(`PASS  fountain ${label}  k=${r.k} frames=${r.sent} overhead=${r.overhead}x`); }
+  else { ffail++; console.log(`FAIL  fountain ${label}  ${JSON.stringify(r)}`); }
+}
+
+/* Two transfers in a row must not bleed into each other: the decoder is seeded by the
+   transfer id, and the old default decoder hard-coded session 1, so this is the case
+   that was broken before the merge. */
+(function () {
+  const a = randBytes(4096), b = randBytes(4096);
+  const ta = Frame.Sender(a, { blockSize: 700, transferId: 7 });
+  const tb = Frame.Sender(b, { blockSize: 700, transferId: 9 });
+  const ra = Frame.Receiver(), rb = Frame.Receiver();
+  let guard = 0;
+  while ((!ra.complete || !rb.complete) && guard < 400) {
+    if (!ra.complete) ra.add(ta.next());
+    if (!rb.complete) rb.add(tb.next());
+    guard++;
+  }
+  let ok = ra.complete && rb.complete;
+  if (ok) {
+    const oa = ra.payload(), ob = rb.payload();
+    for (let i = 0; i < a.length; i++) if (oa[i] !== a[i] || ob[i] !== b[i]) { ok = false; break; }
+  }
+  if (ok) { fpass++; console.log("PASS  fountain two interleaved transfers with different ids"); }
+  else { ffail++; console.log("FAIL  fountain two interleaved transfers"); }
+})();
+
+/* A frame from a different transfer id is refused rather than decoded into nonsense. */
+(function () {
+  const t = Frame.Sender(randBytes(2048), { blockSize: 512, transferId: 3 });
+  const r = Frame.Receiver({ magics: [Frame.DEFAULT_MAGIC] });
+  let ok = false;
+  try {
+    const f = Frame.parse(t.next());
+    ok = f.transferId === 3;
+  } catch (e) { ok = false; }
+  if (ok) { fpass++; console.log("PASS  fountain the frame carries its transfer id"); }
+  else { ffail++; console.log("FAIL  fountain transfer id"); }
+})();
+
+console.log(`\nfountain: ${fpass} passed, ${ffail} failed`);
+process.exit(fail + ffail ? 1 : 0);

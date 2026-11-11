@@ -1,18 +1,14 @@
 # frame-kit
 
-[![live](https://img.shields.io/badge/live-online-22c55e)](https://drsamonline.github.io/frame-kit/)
-[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
-
-
-
 ![Screenshot](docs/shot.png)
-**The shared transfer-frame core for drsamonline apps.** One file, no build step,
-no dependencies.
 
-`optical-kit` moves bytes; `frame-kit` *wraps* them. It is the layer the
-optical-transfer apps (`helioprism`, `blinkcode-ai`, `BLINKTRANSFER`) were each
-re-implementing: a self-describing frame, the rateless collector that locks onto a
-stream, and the byte/checksum helpers underneath.
+**The shared transfer core for drsamonline apps.** One file, no build step, no dependencies.
+
+This kit is the whole transfer path: it **moves bytes** (a systematic LT fountain code) and
+**wraps them** (a self-describing 22-byte header with two CRCs). It absorbed `optical-kit` on
+2026-11-12, which carried the encoder and a second, incompatible 17-byte frame beside this
+one — two definitions of "a self-describing frame" used by the same three apps
+(`helioprism`, `blinkcode-ai`, `BLINKTRANSFER`), drifting apart.
 
 ## What it gives you
 
