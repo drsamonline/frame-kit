@@ -1,5 +1,10 @@
 # frame-kit
 
+[![live](https://img.shields.io/badge/live-online-22c55e)](https://drsamonline.github.io/frame-kit/)
+[![test](https://github.com/drsamonline/frame-kit/actions/workflows/test.yml/badge.svg)](https://github.com/drsamonline/frame-kit/actions/workflows/test.yml)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
+[![version](https://img.shields.io/badge/version-2.0.0-6d8cff)](VERSION)
+
 ![Screenshot](docs/shot.png)
 
 **The shared transfer core for drsamonline apps.** One file, no build step, no dependencies.
